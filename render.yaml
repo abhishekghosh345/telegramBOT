@@ -1,9 +1,6 @@
 services:
   - type: web
     name: terabox-telegram-bot
-    runtime: python
+    env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python bot.py"
-    envVars:
-      - key: BOT_TOKEN
-        sync: false
+    startCommand: "gunicorn bot:app --bind 0.0.0.0:$PORT --workers 1"
