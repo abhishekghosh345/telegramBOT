@@ -3,7 +3,7 @@ import requests
 import re
 import os
 
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+BOT_TOKEN = "BOT_TOKEN"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # -------- Extract shareid + uk from Terabox link ----------
