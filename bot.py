@@ -3,6 +3,8 @@ import requests
 import json
 import tempfile
 from flask import Flask, request, jsonify
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # --- Config ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
