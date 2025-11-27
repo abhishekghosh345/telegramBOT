@@ -1,38 +1,55 @@
-import telebot
 import os
+import requests
 from flask import Flask, request
 
-TOKEN = os.getenv('BOT_TOKEN')
-bot = telebot.TeleBot(TOKEN)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
+FILE_API = f"https://api.telegram.org/file/bot{BOT_TOKEN}"
+
 app = Flask(__name__)
 
-# Telegram webhook URL
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Example: https://your-app.onrender.com/webhook
+@app.route("/")
+def home():
+    return "Bot is running!"
 
-@app.route('/' , methods=['GET'])
-def index():
-    return "Bot running!", 200
-
-@app.route('/webhook', methods=['POST'])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_str = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_str)
-        bot.process_new_updates([update])
-        return '', 200
-    else:
-        return "Invalid", 403
+    update = request.get_json()
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "Hello! Bot is working via webhook!")
+    if "message" in update:
+        msg = update["message"]
+
+        # Video message
+        if "video" in msg:
+            file_id = msg["video"]["file_id"]
+            chat_id = msg["chat"]["id"]
+
+            # STEP 1: get file path
+            r = requests.get(f"{TELEGRAM_API}/getFile?file_id={file_id}")
+            result = r.json()
+
+            file_path = result["result"]["file_path"]
+
+            # STEP 2: download actual file
+            file_url = f"{FILE_API}/{file_path}"
+            video_data = requests.get(file_url).content
+
+            # STEP 3: save file
+            filename = file_path.split("/")[-1]
+            save_path = os.path.join("downloads", filename)
+            os.makedirs("downloads", exist_ok=True)
+
+            with open(save_path, "wb") as f:
+                f.write(video_data)
+
+            # STEP 4: confirm message
+            requests.post(f"{TELEGRAM_API}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": f"Video saved as {filename}"
+            })
+
+    return "ok", 200
+
 
 if __name__ == "__main__":
-    # Remove old webhook
-    bot.remove_webhook()
-
-    # Set new webhook
-    bot.set_webhook(url=WEBHOOK_URL)
-
-    # Start Flask app
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
